@@ -26,6 +26,7 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
+				CommandLine="mkdir &quot;$(GenericIncludeFolder)\suil-0\suil&quot; 2&gt; NUL&#x0D;&#x0A;cd ../..&#x0D;&#x0A;perl win32-fixup.pl"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
