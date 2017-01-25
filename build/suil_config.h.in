@@ -1,0 +1,15 @@
+/* WARNING! All changes made to this file will be lost! */
+
+#ifndef W_SUIL_CONFIG_H_WAF
+#define W_SUIL_CONFIG_H_WAF
+
+#define HAVE_LV2 1
+#define HAVE_GTK2 1
+#define SUIL_VERSION @PACKAGE_VERSION@
+#define SUIL_MODULE_DIR @SUIL_MODULE_DIR@
+#define SUIL_DIR_SEP "/"
+//#define SUIL_GTK2_LIB_NAME "libgtk_win32_2_0.lib"
+#define SUIL_MODULE_PREFIX ""
+//#define SUIL_MODULE_EXT "D.dll"
+
+#endif /* W_SUIL_CONFIG_H_WAF */
