@@ -17,8 +17,12 @@
 #include <gtk/gtk.h>
 
 #include <QApplication>
+#include <QMouseEvent>
 #include <QVBoxLayout>
-#include <QX11EmbedWidget>
+#include <QWidget>
+#include <QWindow>
+#include <QX11Info>
+#include <X11/Xlib.h>
 
 #include "./suil_internal.h"
 
@@ -30,19 +34,65 @@ extern "C" {
 typedef struct _SuilQtWrapper      SuilQtWrapper;
 typedef struct _SuilQtWrapperClass SuilQtWrapperClass;
 
-struct _SuilQtWrapper {
-	GtkSocket        socket;
-	QApplication*    app;
-	QX11EmbedWidget* qembed;
-	SuilWrapper*     wrapper;
-	SuilInstance*    instance;
+class EmbedWidget : public QWidget
+{
+public:
+	EmbedWidget()
+		: QWidget()
+		, display(QX11Info::display())
+		, wid(winId())
+	{}
+
+	WId id() const { return wid; }
+
+protected:
+	bool eventFilter(QObject*, QEvent* ev) {
+		if (wid == 0 || !display) {
+			return false;
+		}
+
+		if (ev->type() == QEvent::Enter ||
+		    ev->type() == QEvent::WindowActivate) {
+			const Window root = XRootWindow(display, 0);
+			int x, y;
+			Window child;
+			XTranslateCoordinates(display, wid, root, 0, 0, &x, &y, &child);
+
+			XWindowAttributes attrs;
+			XGetWindowAttributes(display, wid, &attrs);
+
+			const QPoint p = QPoint(x - attrs.x, y - attrs.y);
+			if (p != pos) {
+				pos = p;
+				move(pos);
+				XMoveWindow(display, wid, 0, 0);
+			}
+		}
+
+		return false;
+	}
+
+private:
+	Display* display;
+	QPoint   pos;
+	WId      wid;
 };
 
-struct _SuilQtWrapperClass {
+struct _SuilQtWrapper
+{
+	GtkSocket     socket;
+	QApplication* app;
+	EmbedWidget*  qembed;
+	SuilWrapper*  wrapper;
+	SuilInstance* instance;
+};
+
+struct _SuilQtWrapperClass
+{
 	GtkSocketClass parent_class;
 };
 
-GType suil_qt_wrapper_get_type(void);  // Accessor for SUIL_TYPE_QT_WRAPPER
+GType suil_qt_wrapper_get_type(void); // Accessor for SUIL_TYPE_QT_WRAPPER
 
 G_DEFINE_TYPE(SuilQtWrapper, suil_qt_wrapper, GTK_TYPE_SOCKET)
 
@@ -87,24 +137,26 @@ suil_qt_wrapper_realize(GtkWidget* w, gpointer data)
 	SuilQtWrapper* const wrap = SUIL_QT_WRAPPER(w);
 	GtkSocket* const     s    = GTK_SOCKET(w);
 
-	gtk_socket_add_id(s, wrap->qembed->winId());
+	gtk_socket_add_id(s, wrap->qembed->id());
 	wrap->qembed->show();
 }
 
 static int
-wrapper_wrap(SuilWrapper*  wrapper,
-             SuilInstance* instance)
+wrapper_wrap(SuilWrapper* wrapper, SuilInstance* instance)
 {
 	SuilQtWrapper* const wrap = SUIL_QT_WRAPPER(wrapper->impl);
 
-	wrap->qembed   = new QX11EmbedWidget();
+	wrap->qembed   = new EmbedWidget();
 	wrap->wrapper  = wrapper;
 	wrap->instance = instance;
+
+	wrap->qembed->setAttribute(Qt::WA_LayoutUsesWidgetRect);
 
 	QWidget*     qwidget = (QWidget*)instance->ui_widget;
 	QVBoxLayout* layout  = new QVBoxLayout(wrap->qembed);
 	layout->addWidget(qwidget);
 
+	qwidget->installEventFilter(wrap->qembed);
 	qwidget->setParent(wrap->qembed);
 
 	g_signal_connect_after(G_OBJECT(wrap), "realize",
@@ -152,4 +204,4 @@ suil_wrapper_new(SuilHost*      host,
 	return wrapper;
 }
 
-}  // extern "C"
+} // extern "C"
