@@ -10,7 +10,7 @@ from waflib import TaskGen
 # major increment <=> incompatible changes
 # minor increment <=> compatible changes (additions)
 # micro increment <=> no interface changes
-SUIL_VERSION       = '0.8.5'
+SUIL_VERSION       = '0.8.7'
 SUIL_MAJOR_VERSION = '0'
 
 # Mandatory waf variables
@@ -65,6 +65,7 @@ def configure(conf):
         conf.env.NODELETE_FLAGS = ['-Wl,-z,nodelete']
 
     autowaf.check_pkg(conf, 'lv2', atleast_version='1.12.0', uselib_store='LV2')
+    autowaf.check_pkg(conf, 'x11', uselib_store='X11', mandatory=False)
 
     if not Options.options.no_gtk:
         autowaf.check_pkg(conf, 'gtk+-2.0', uselib_store='GTK2',
@@ -95,8 +96,6 @@ def configure(conf):
         if not Options.options.no_qt5:
             autowaf.check_pkg(conf, 'Qt5Widgets', uselib_store='QT5',
                               atleast_version='5.1.0', mandatory=False)
-            autowaf.check_pkg(conf, 'Qt5X11Extras', uselib_store='QT5_X11',
-                              atleast_version='5.1.0', mandatory=False)
 
     conf.check_cc(define_name   = 'HAVE_LIBDL',
                   lib           = 'dl',
@@ -115,8 +114,6 @@ def configure(conf):
 
     if conf.env.HAVE_GTK2 and conf.env.HAVE_QT5:
         autowaf.define(conf, 'SUIL_WITH_GTK2_IN_QT5', 1)
-
-    if conf.env.HAVE_GTK2 and conf.env.HAVE_QT5_X11:
         autowaf.define(conf, 'SUIL_WITH_QT5_IN_GTK2', 1)
 
     if conf.env.HAVE_GTK2 and conf.env.HAVE_GTK2_X11:
@@ -136,6 +133,9 @@ def configure(conf):
 
     if conf.env.HAVE_QT5:
         autowaf.define(conf, 'SUIL_WITH_X11_IN_QT5', 1)
+
+    if conf.env.HAVE_X11:
+        autowaf.define(conf, 'SUIL_WITH_X11', 1)
 
     module_prefix = ''
     module_ext    = ''
@@ -276,9 +276,9 @@ def build(bld):
                   defines      = ['SUIL_SHARED', 'SUIL_INTERNAL'],
                   install_path = module_dir,
                   cxxflags     = cflags,
-                  lib          = modlib + ['X11'],
+                  lib          = modlib,
                   linkflags    = bld.env.NODELETE_FLAGS)
-        autowaf.use_lib(bld, obj, 'GTK2 QT5 QT5_X11 LV2')
+        autowaf.use_lib(bld, obj, 'GTK2 QT5 LV2')
 
     if bld.env.SUIL_WITH_X11_IN_GTK2:
         obj = bld(features     = 'c cshlib',
@@ -349,6 +349,17 @@ def build(bld):
                   cflags       = cflags,
                   lib          = modlib)
         autowaf.use_lib(bld, obj, 'QT5 LV2')
+
+    if bld.env.SUIL_WITH_X11:
+        obj = bld(features     = 'c cshlib',
+                  source       = 'src/x11.c',
+                  target       = 'suil_x11',
+                  includes     = ['.'],
+                  defines      = ['SUIL_SHARED', 'SUIL_INTERNAL'],
+                  install_path = module_dir,
+                  cflags       = cflags,
+                  lib          = modlib)
+        autowaf.use_lib(bld, obj, 'X11')
 
     # Documentation
     autowaf.build_dox(bld, 'SUIL', SUIL_VERSION, top, out)
