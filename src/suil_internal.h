@@ -22,6 +22,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _MSC_VER
+#include "./suil_config.h" /* Added by JE - 27-03-2017 (for 'SUIL_MODULE_DIR') */
+#endif
+
 #ifdef _WIN32
 #include <windows.h>
 #define dlopen(path, flags) LoadLibrary(path)
