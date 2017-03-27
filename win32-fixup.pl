@@ -4,12 +4,12 @@
 require "../local-paths.lib";
 
 $package_string = "\"suil 0.8\"";
-$version_string = "\"0.08.5\"";
-$suil_version = "0.08.5";
+$version_string = "\"0.08.7\"";
+$suil_version = "0.08.7";
 $major = 0;
 $minor = 8;
-$micro = 5;
-$binary_age = 85;
+$micro = 7;
+$binary_age = 87;
 $interface_age = 0;
 $current_minus_age = 0;
 $gettext_package = "suil";
