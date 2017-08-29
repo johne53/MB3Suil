@@ -133,6 +133,7 @@ def configure(conf):
 
     if conf.env.HAVE_QT5:
         autowaf.define(conf, 'SUIL_WITH_X11_IN_QT5', 1)
+        autowaf.set_cxx11_mode(conf)
 
     if conf.env.HAVE_X11:
         autowaf.define(conf, 'SUIL_WITH_X11', 1)
@@ -359,7 +360,7 @@ def build(bld):
                   install_path = module_dir,
                   cflags       = cflags,
                   lib          = modlib)
-        autowaf.use_lib(bld, obj, 'X11')
+        autowaf.use_lib(bld, obj, 'X11 LV2')
 
     # Documentation
     autowaf.build_dox(bld, 'SUIL', SUIL_VERSION, top, out)

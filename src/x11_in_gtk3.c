@@ -70,9 +70,11 @@ x_window_is_valid(SuilX11Wrapper* socket)
 	           &root, &parent, &children, &childcount);
 	for (unsigned i = 0; i < childcount; ++i) {
 		if (children[i] == (Window)socket->instance->ui_widget) {
+			XFree(children);
 			return true;
 		}
 	}
+	XFree(children);
 	return false;
 }
 
@@ -195,6 +197,7 @@ forward_size_request(SuilX11Wrapper* socket,
 		int        width  = allocation->width;
 		int        height = allocation->height;
 		XSizeHints hints;
+		memset(&hints, 0, sizeof(hints));
 		XGetNormalHints(GDK_WINDOW_XDISPLAY(window),
 		                (Window)socket->instance->ui_widget,
 		                &hints);
