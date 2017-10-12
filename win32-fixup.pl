@@ -3,13 +3,13 @@
 
 require "../local-paths.lib";
 
-$package_string = "\"suil 0.8\"";
-$version_string = "\"0.08.7\"";
-$suil_version = "0.08.7";
+$package_string = "\"suil 0.10\"";
+$version_string = "\"0.10.1\"";
+$suil_version = "0.10.1";
 $major = 0;
-$minor = 8;
-$micro = 7;
-$binary_age = 87;
+$minor = 10;
+$micro = 1;
+$binary_age = 101;
 $interface_age = 0;
 $current_minus_age = 0;
 $gettext_package = "suil";
