@@ -39,13 +39,11 @@ def options(ctx):
                    help="Gtk3 library name [Default: libgtk-x11-3.0.so.0]")
 
 def configure(conf):
-    conf.line_just = 40
-    conf.load('compiler_c')
-    conf.load('compiler_cxx')
-    autowaf.configure(conf)
     autowaf.display_header('Suil Configuration')
-    autowaf.set_c99_mode(conf)
-    autowaf.set_cxx11_mode(conf)
+    autowaf.set_line_just(conf, 42)
+    conf.load('compiler_c', cache=True)
+    conf.load('compiler_cxx', cache=True)
+    conf.load('autowaf', cache=True)
 
     conf.env.BUILD_SHARED = not conf.options.no_shared
     conf.env.BUILD_STATIC = conf.options.static
@@ -92,6 +90,10 @@ def configure(conf):
         if not conf.options.no_qt5:
             autowaf.check_pkg(conf, 'Qt5Widgets', uselib_store='QT5',
                               atleast_version='5.1.0', mandatory=False)
+            if conf.check_cxx(header_name = 'QMacCocoaViewContainer',
+                              uselib      = 'QT5',
+                              mandatory   = False):
+                autowaf.define(conf, 'SUIL_WITH_COCOA_IN_QT5', 1)
 
     conf.check_cc(define_name   = 'HAVE_LIBDL',
                   lib           = 'dl',
@@ -105,8 +107,9 @@ def configure(conf):
     autowaf.define(conf, 'SUIL_GTK3_LIB_NAME', conf.options.gtk3_lib_name);
 
     if conf.env.HAVE_GTK2 and conf.env.HAVE_QT4:
-        autowaf.define(conf, 'SUIL_WITH_GTK2_IN_QT4', 1)
         autowaf.define(conf, 'SUIL_WITH_QT4_IN_GTK2', 1)
+        if conf.env.HAVE_GTK2_X11:
+            autowaf.define(conf, 'SUIL_WITH_GTK2_IN_QT4', 1)
 
     if conf.env.HAVE_GTK2 and conf.env.HAVE_QT5:
         autowaf.define(conf, 'SUIL_WITH_GTK2_IN_QT5', 1)
@@ -129,7 +132,6 @@ def configure(conf):
 
     if conf.env.HAVE_QT5:
         autowaf.define(conf, 'SUIL_WITH_X11_IN_QT5', 1)
-        autowaf.set_cxx11_mode(conf)
 
     if conf.env.HAVE_X11:
         autowaf.define(conf, 'SUIL_WITH_X11', 1)
@@ -153,6 +155,10 @@ def configure(conf):
     autowaf.set_lib_env(conf, 'suil', SUIL_VERSION)
     conf.write_config_header('suil_config.h', remove=False)
 
+    autowaf.display_summary(conf)
+    autowaf.display_msg(conf, 'Static library', bool(conf.env.BUILD_STATIC))
+    autowaf.display_msg(conf, 'Shared library', bool(conf.env.BUILD_SHARED))
+
     if conf.env.HAVE_GTK2:
         autowaf.display_msg(conf, "Gtk2 Library Name",
                             conf.env.SUIL_GTK2_LIB_NAME)
@@ -170,7 +176,8 @@ def configure(conf):
                 ('x11', 'gtk2'),
                 ('x11', 'gtk3'),
                 ('x11', 'qt4'),
-                ('x11', 'qt5')]
+                ('x11', 'qt5'),
+                ('cocoa', 'qt5')]
     for w in wrappers:
         var = 'SUIL_WITH_%s_IN_%s' % (w[0].upper(), w[1].upper())
         autowaf.display_msg(conf, 'Support for %s in %s' % (w[0], w[1]),
@@ -347,6 +354,18 @@ def build(bld):
                   lib          = modlib)
         autowaf.use_lib(bld, obj, 'QT5 LV2')
 
+    if bld.env.SUIL_WITH_COCOA_IN_QT5:
+        obj = bld(features     = 'cxx cxxshlib',
+                  source       = 'src/cocoa_in_qt5.mm',
+                  target       = 'suil_cocoa_in_qt5',
+                  includes     = ['.'],
+                  defines      = ['SUIL_SHARED', 'SUIL_INTERNAL'],
+                  install_path = module_dir,
+                  cflags       = cflags,
+                  lib          = modlib,
+                  linkflags    = ['-framework', 'Cocoa'])
+        autowaf.use_lib(bld, obj, 'QT5 QT5_MAC_EXTRAS LV2')
+
     if bld.env.SUIL_WITH_X11:
         obj = bld(features     = 'c cshlib',
                   source       = 'src/x11.c',
@@ -366,7 +385,22 @@ def build(bld):
         bld.add_post_fun(lambda ctx: autowaf.make_simple_dox(APPNAME))
 
 def lint(ctx):
-    subprocess.call('cpplint.py --filter=-whitespace,+whitespace/comments,-build/header_guard,-readability/casting,-readability/todo src/* suil/*', shell=True)
+    "checks code for style issues"
+    import subprocess
+    cmd = ("clang-tidy -p=. -header-filter=suil/ -checks=\"*," +
+           "-clang-analyzer-alpha.*," +
+           "-cppcoreguidelines-*," +
+           "-google-readability-todo," +
+           "-llvm-header-guard," +
+           "-llvm-include-order," +
+           "-misc-unused-parameters," +
+           "-misc-unused-parameters," +
+           "-modernize-*," +
+           "-readability-else-after-return," +
+           "-readability-implicit-bool-cast\" " +
+           "$(find .. -name '*.c' -or -name '*.cpp' -or -name '*.mm')")
+    print cmd
+    subprocess.call(cmd, cwd='build', shell=True)
 
 def release(ctx):
     autowaf.release(APPNAME.title(), VERSION)
