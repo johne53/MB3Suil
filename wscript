@@ -7,7 +7,7 @@ from waflib import TaskGen
 from waflib.extras import autowaf
 
 # Semver package/library version
-SUIL_VERSION       = '0.10.0'
+SUIL_VERSION       = '0.10.2'
 SUIL_MAJOR_VERSION = SUIL_VERSION[0:SUIL_VERSION.find('.')]
 
 # Mandatory waf variables
@@ -413,7 +413,7 @@ def posts(ctx):
     autowaf.news_to_posts(
         os.path.join(path, 'NEWS'),
         {'title'        : 'Suil',
-         'description'  : autowaf.get_blurb(os.path.join(path, 'README')),
+         'description'  : autowaf.get_blurb(os.path.join(path, 'README.md')),
          'dist_pattern' : 'http://download.drobilla.net/suil-%s.tar.bz2'},
         { 'Author' : 'drobilla',
           'Tags'   : 'Hacking, LAD, LV2, Suil' },
