@@ -1,5 +1,5 @@
-Suil
-====
+# MB3Suil
+Localised serd repo for Mixbus 3 (Windows)
 
 Suil is a library for loading and wrapping LV2 plugin UIs.
 For more information, see <http://drobilla.net/software/suil>.
