@@ -28,8 +28,9 @@
 
 #include "./suil_internal.h"
 
-#include "lv2/options/options.h"
-#include "lv2/urid/urid.h"
+// !!!! These 2 reverted by JE - 29/04/2019
+#include "lv2/lv2plug.in/ns/ext/options/options.h"
+#include "lv2/lv2plug.in/ns/ext/urid/urid.h"
 
 extern "C" {
 

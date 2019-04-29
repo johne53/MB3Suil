@@ -23,7 +23,8 @@
 
 #include <stdint.h>
 
-#include "lv2/core/lv2.h"
+// !!!! Reverted by JE - 29/04/2019
+#include "lv2/lv2plug.in/ns/lv2core/lv2.h"
 
 #ifdef _WIN32
 #    define SUIL_LIB_IMPORT __declspec(dllimport)
