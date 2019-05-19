@@ -89,7 +89,7 @@ def configure(conf):
             autowaf.check_pkg(conf, 'Qt5Widgets', uselib_store='QT5',
                               atleast_version='5.1.0', mandatory=False)
             if conf.check_cxx(header_name = 'QMacCocoaViewContainer',
-                              uselib      = 'QT5',
+                              uselib      = 'QT5_COCOA',
                               mandatory   = False):
                 autowaf.define(conf, 'SUIL_WITH_COCOA_IN_QT5', 1)
 
@@ -149,7 +149,7 @@ def configure(conf):
     autowaf.define(conf, 'SUIL_MODULE_PREFIX', module_prefix)
     autowaf.define(conf, 'SUIL_MODULE_EXT', module_ext)
 
-    conf.run_env.append_unique('SUIL_MODULE_DIR', conf.build_path())
+    conf.run_env.append_unique('SUIL_MODULE_DIR', [conf.build_path()])
     autowaf.set_lib_env(conf, 'suil', SUIL_VERSION)
     conf.write_config_header('suil_config.h', remove=False)
 
@@ -360,7 +360,7 @@ def build(bld):
                   install_path = module_dir,
                   cflags       = cflags,
                   lib          = modlib,
-                  uselib       = 'QT5 QT5_MAC_EXTRAS LV2',
+                  uselib       = 'QT5 QT5_COCOA LV2',
                   linkflags    = ['-framework', 'Cocoa'])
 
     if bld.env.SUIL_WITH_X11:
