@@ -7,7 +7,7 @@ from waflib import TaskGen
 from waflib.extras import autowaf
 
 # Semver package/library version
-SUIL_VERSION       = '0.10.3'
+SUIL_VERSION       = '0.10.4'
 SUIL_MAJOR_VERSION = SUIL_VERSION[0:SUIL_VERSION.find('.')]
 
 # Mandatory waf variables
@@ -98,7 +98,7 @@ def configure(conf):
                   mandatory     = False)
 
     autowaf.define(conf, 'SUIL_MODULE_DIR',
-                   os.path.join(conf.env.LIBDIR, 'suil-' + SUIL_MAJOR_VERSION))
+                   conf.env.LIBDIR + '/suil-' + SUIL_MAJOR_VERSION)
     autowaf.define(conf, 'SUIL_DIR_SEP', '/')
     autowaf.define(conf, 'SUIL_GTK2_LIB_NAME', conf.options.gtk2_lib_name);
     autowaf.define(conf, 'SUIL_GTK3_LIB_NAME', conf.options.gtk3_lib_name);
@@ -117,6 +117,9 @@ def configure(conf):
 
     if conf.env.HAVE_GTK3 and conf.env.HAVE_GTK3_X11:
         autowaf.define(conf, 'SUIL_WITH_X11_IN_GTK3', 1)
+
+    if conf.env.HAVE_GTK3 and conf.env.HAVE_QT5:
+        autowaf.define(conf, 'SUIL_WITH_QT5_IN_GTK3', 1)
 
     if conf.env.HAVE_GTK2 and conf.env.HAVE_GTK2_QUARTZ:
         autowaf.define(conf, 'SUIL_WITH_COCOA_IN_GTK2', 1)
@@ -174,6 +177,7 @@ def configure(conf):
                 ('win', 'gtk2'),
                 ('x11', 'gtk2'),
                 ('x11', 'gtk3'),
+                ('qt5', 'gtk3'),
                 ('x11', 'qt4'),
                 ('x11', 'qt5'),
                 ('cocoa', 'qt5')]
@@ -271,7 +275,7 @@ def build(bld):
 
     if bld.env.SUIL_WITH_QT5_IN_GTK2:
         obj = bld(features     = 'cxx cxxshlib',
-                  source       = 'src/qt5_in_gtk2.cpp',
+                  source       = 'src/qt5_in_gtk.cpp',
                   target       = 'suil_qt5_in_gtk2',
                   includes     = ['.'],
                   defines      = ['SUIL_SHARED', 'SUIL_INTERNAL'],
@@ -303,6 +307,18 @@ def build(bld):
                   cflags       = cflags,
                   lib          = modlib + ['X11'],
                   uselib       = 'GTK3 GTK3_X11 LV2',
+                  linkflags    = bld.env.NODELETE_FLAGS)
+
+    if bld.env.SUIL_WITH_QT5_IN_GTK3:
+        obj = bld(features     = 'cxx cxxshlib',
+                  source       = 'src/qt5_in_gtk.cpp',
+                  target       = 'suil_qt5_in_gtk3',
+                  includes     = ['.'],
+                  defines      = ['SUIL_SHARED', 'SUIL_INTERNAL'],
+                  install_path = module_dir,
+                  cflags       = cflags,
+                  lib          = modlib,
+                  uselib       = 'GTK3 QT5 LV2',
                   linkflags    = bld.env.NODELETE_FLAGS)
 
     if bld.env.SUIL_WITH_COCOA_IN_GTK2:
@@ -414,3 +430,7 @@ def posts(ctx):
         { 'Author' : 'drobilla',
           'Tags'   : 'Hacking, LAD, LV2, Suil' },
         os.path.join(out, 'posts'))
+
+def dist(ctx):
+    ctx.base_path = ctx.path
+    ctx.excl = ctx.get_excl() + ' .gitmodules'
