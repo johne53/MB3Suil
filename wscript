@@ -7,7 +7,7 @@ from waflib import TaskGen
 from waflib.extras import autowaf
 
 # Semver package/library version
-SUIL_VERSION       = '0.10.4'
+SUIL_VERSION       = '0.10.6'
 SUIL_MAJOR_VERSION = SUIL_VERSION[0:SUIL_VERSION.find('.')]
 
 # Mandatory waf variables
@@ -15,6 +15,11 @@ APPNAME = 'suil'        # Package name for waf dist
 VERSION = SUIL_VERSION  # Package version for waf dist
 top     = '.'           # Source directory
 out     = 'build'       # Build directory
+
+# Release variables
+uri          = 'http://drobilla.net/sw/suil'
+dist_pattern = 'http://download.drobilla.net/suil-%d.%d.%d.tar.bz2'
+post_tags    = ['Hacking', 'LAD', 'LV2', 'Suil']
 
 def options(ctx):
     ctx.load('compiler_c')
@@ -209,7 +214,8 @@ def build(bld):
 
     # Pkgconfig file
     autowaf.build_pc(bld, 'SUIL', SUIL_VERSION, SUIL_MAJOR_VERSION, [],
-                     {'SUIL_MAJOR_VERSION' : SUIL_MAJOR_VERSION})
+                     {'SUIL_MAJOR_VERSION' : SUIL_MAJOR_VERSION,
+                      'SUIL_PKG_DEPS' : 'lv2'})
 
     cflags = []
     lib    = []
@@ -426,25 +432,6 @@ def lint(ctx):
            "-readability-implicit-bool-cast\" " +
            "$(find .. -name '*.c' -or -name '*.cpp' -or -name '*.mm')")
     subprocess.call(cmd, cwd='build', shell=True)
-
-def release(ctx):
-    autowaf.release(APPNAME.title(), VERSION)
-
-def upload(ctx):
-    autowaf.run_script(
-        ['scp suil-%s.tar* drobilla@drobilla.net:~/download.drobilla.net/' % VERSION,
-         'rsync -ravz --delete -e ssh build/doc/html/ drobilla@drobilla.net:~/drobilla.net/docs/suil/'])
-
-def posts(ctx):
-    path = str(ctx.path.abspath())
-    autowaf.news_to_posts(
-        os.path.join(path, 'NEWS'),
-        {'title'        : 'Suil',
-         'description'  : autowaf.get_blurb(os.path.join(path, 'README.md')),
-         'dist_pattern' : 'http://download.drobilla.net/suil-%s.tar.bz2'},
-        { 'Author' : 'drobilla',
-          'Tags'   : 'Hacking, LAD, LV2, Suil' },
-        os.path.join(out, 'posts'))
 
 def dist(ctx):
     ctx.base_path = ctx.path

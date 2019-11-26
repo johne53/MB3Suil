@@ -1,3 +1,5 @@
+__pycache__
+
 /.lock-waf*
 /.waf-[0-9]*/
 /build/
