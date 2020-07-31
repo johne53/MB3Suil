@@ -41,6 +41,11 @@ public:
 		, _ui_timer(0)
 	{}
 
+	SuilQX11Widget(const SuilQX11Widget&) = delete;
+	SuilQX11Widget& operator=(const SuilQX11Widget&) = delete;
+
+	~SuilQX11Widget() override;
+
 	void start_idle(SuilInstance*               instance,
 	                const LV2UI_Idle_Interface* idle_iface)
 	{
@@ -89,8 +94,8 @@ protected:
 		if (_window) {
 			XResizeWindow(QX11Info::display(),
 			              _window,
-			              event->size().width(),
-			              event->size().height());
+			              (unsigned)event->size().width(),
+			              (unsigned)event->size().height());
 		}
 	}
 
@@ -118,6 +123,10 @@ private:
 	int                         _ui_timer;
 };
 
+SuilQX11Widget::~SuilQX11Widget()
+{
+}
+
 typedef struct {
 	QWidget*        host_widget;
 	SuilQX11Widget* parent;
@@ -140,7 +149,7 @@ wrapper_wrap(SuilWrapper*  wrapper,
              SuilInstance* instance)
 {
 	SuilX11InQt5Wrapper* const impl    = (SuilX11InQt5Wrapper*)wrapper->impl;
-	SuilQX11Widget* const      ew      = (SuilQX11Widget*)impl->parent;
+	SuilQX11Widget* const      ew      = impl->parent;
 	Display* const             display = QX11Info::display();
 	const Window               window  = (Window)instance->ui_widget;
 
@@ -189,9 +198,9 @@ wrapper_resize(LV2UI_Feature_Handle handle, int width, int height)
 
 SUIL_LIB_EXPORT
 SuilWrapper*
-suil_wrapper_new(SuilHost*      host,
-                 const char*    host_type_uri,
-                 const char*    ui_type_uri,
+suil_wrapper_new(SuilHost*,
+                 const char*,
+                 const char*,
                  LV2_Feature*** features,
                  unsigned       n_features)
 {

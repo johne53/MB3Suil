@@ -85,6 +85,8 @@ x_window_is_valid(SuilX11Wrapper* socket)
 static gboolean
 on_plug_removed(GtkSocket* sock, gpointer data)
 {
+	(void)data;
+
 	SuilX11Wrapper* const self = SUIL_X11_WRAPPER(sock);
 
 	if (self->idle_id) {
@@ -217,7 +219,7 @@ forward_size_request(SuilX11Wrapper* socket,
 		// Resize widget window
 		XResizeWindow(GDK_WINDOW_XDISPLAY(window),
 		              (Window)socket->instance->ui_widget,
-		              width, height);
+		              (unsigned)width, (unsigned)height);
 
 		// Get actual widget geometry
 		Window       root;
@@ -231,8 +233,8 @@ forward_size_request(SuilX11Wrapper* socket,
 		             &ignored, &ignored);
 
 		// Center widget in allocation
-		wx = (allocation->width  - ww) / 2;
-		wy = (allocation->height - wh) / 2;
+		wx = (allocation->width  - (int)ww) / 2;
+		wy = (allocation->height - (int)wh) / 2;
 		XMoveWindow(GDK_WINDOW_XDISPLAY(window),
 		            (Window)socket->instance->ui_widget,
 		            wx, wy);
@@ -431,6 +433,10 @@ suil_wrapper_new(SuilHost*      host,
                  LV2_Feature*** features,
                  unsigned       n_features)
 {
+	(void)host;
+	(void)host_type_uri;
+	(void)ui_type_uri;
+
 	SuilWrapper* wrapper = (SuilWrapper*)calloc(1, sizeof(SuilWrapper));
 	wrapper->wrap = wrapper_wrap;
 	wrapper->free = wrapper_free;
@@ -466,7 +472,7 @@ suil_wrapper_new(SuilHost*      host,
 		LV2_URID ui_updateRate = map->map(map->handle, LV2_UI__updateRate);
 		for (LV2_Options_Option* o = options; o->key; ++o) {
 			if (o->key == ui_updateRate) {
-				wrap->idle_ms = 1000.0f / *(const float*)o->value;
+				wrap->idle_ms = (guint)(1000.0f / *(const float*)o->value);
 				break;
 			}
 		}

@@ -102,7 +102,7 @@ suil_qt_wrapper_init(SuilQtWrapper* self)
 }
 
 static void
-suil_qt_wrapper_realize(GtkWidget* w, gpointer data)
+suil_qt_wrapper_realize(GtkWidget* w, gpointer)
 {
 	SuilQtWrapper* const wrap = SUIL_QT_WRAPPER(w);
 	GtkSocket* const     s    = GTK_SOCKET(w);
@@ -183,9 +183,9 @@ wrapper_free(SuilWrapper* wrapper)
 
 SUIL_LIB_EXPORT
 SuilWrapper*
-suil_wrapper_new(SuilHost*      host,
-                 const char*    host_type_uri,
-                 const char*    ui_type_uri,
+suil_wrapper_new(SuilHost*,
+                 const char*,
+                 const char*,
                  LV2_Feature*** features,
                  unsigned       n_features)
 {
@@ -221,7 +221,7 @@ suil_wrapper_new(SuilHost*      host,
 		LV2_URID ui_updateRate = map->map(map->handle, LV2_UI__updateRate);
 		for (LV2_Options_Option* o = options; o->key; ++o) {
 			if (o->key == ui_updateRate) {
-				wrap->idle_ms = 1000.0f / *(const float*)o->value;
+				wrap->idle_ms = (guint)(1000.0f / *(const float*)o->value);
 				break;
 			}
 		}
