@@ -1,13 +1,10 @@
 #!/usr/bin/env python
 
-import os
-import subprocess
-
-from waflib import Options, TaskGen
+from waflib import Build, Logs, Options, TaskGen
 from waflib.extras import autowaf
 
 # Semver package/library version
-SUIL_VERSION       = '0.10.7'
+SUIL_VERSION       = '0.10.11'
 SUIL_MAJOR_VERSION = SUIL_VERSION[0:SUIL_VERSION.find('.')]
 
 # Mandatory waf variables
@@ -20,6 +17,7 @@ out     = 'build'       # Build directory
 uri          = 'http://drobilla.net/sw/suil'
 dist_pattern = 'http://download.drobilla.net/suil-%d.%d.%d.tar.bz2'
 post_tags    = ['Hacking', 'LAD', 'LV2', 'Suil']
+
 
 def options(ctx):
     ctx.load('compiler_c')
@@ -40,8 +38,9 @@ def options(ctx):
          'no-cocoa':  'do not build support for Cocoa/Quartz',
          'no-gtk':    'do not build support for Gtk',
          'no-qt':     'do not build support for Qt (any version)',
-         'no-qt4':    'do not build support for Qt4',
-         'no-qt5':    'do not build support for Qt5'})
+         'no-qt5':    'do not build support for Qt5',
+         'no-x11':    'do not build support for X11'})
+
 
 def configure(conf):
     conf.load('compiler_c', cache=True)
@@ -55,17 +54,26 @@ def configure(conf):
     if not conf.env.BUILD_SHARED and not conf.env.BUILD_STATIC:
         conf.fatal('Neither a shared nor a static build requested')
 
+    if conf.env.DOCS:
+        conf.load('sphinx')
+
+    if Options.options.strict:
+        # Check for programs used by lint target
+        conf.find_program("flake8", var="FLAKE8", mandatory=False)
+        conf.find_program("clang-tidy", var="CLANG_TIDY", mandatory=False)
+        conf.find_program("iwyu_tool", var="IWYU_TOOL", mandatory=False)
+
     if Options.options.ultra_strict:
         autowaf.add_compiler_flags(conf.env, '*', {
             'gcc': [
                 '-Wno-padded',
+                '-Wno-suggest-attribute=const',
+                '-Wno-suggest-attribute=pure',
             ],
             'clang': [
-                '-Wno-atomic-implicit-seq-cst',
                 '-Wno-cast-qual',
                 '-Wno-disabled-macro-expansion',
                 '-Wno-padded',
-                '-Wno-variadic-macros',
             ]
         })
 
@@ -78,13 +86,6 @@ def configure(conf):
             ],
         })
 
-        autowaf.add_compiler_flags(conf.env, 'cxx', {
-            'clang': [
-                '-Wno-old-style-cast',
-                '-Wno-zero-as-null-pointer-constant',
-            ],
-        })
-
     conf.env.NODELETE_FLAGS = []
     if (not conf.env.MSVC_COMPILER and
         conf.check(linkflags = ['-Wl,-z,nodelete'],
@@ -93,10 +94,11 @@ def configure(conf):
         conf.env.NODELETE_FLAGS = ['-Wl,-z,nodelete']
 
     conf.check_pkg('lv2 >= 1.16.0', uselib_store='LV2')
-    conf.check_pkg('x11', uselib_store='X11', system=True, mandatory=False)
+
+    if not conf.options.no_x11:
+        conf.check_pkg('x11', uselib_store='X11', system=True, mandatory=False)
 
     def enable_module(var_name):
-        conf.define(var_name, 1)
         conf.env[var_name] = 1
 
     if not conf.options.no_gtk:
@@ -112,10 +114,11 @@ def configure(conf):
             if conf.env.HAVE_GTK2:
                 conf.define('SUIL_OLD_GTK', 1)
 
-        conf.check_pkg('gtk+-x11-2.0',
-                       uselib_store='GTK2_X11',
-                       system=True,
-                       mandatory=False)
+        if not conf.options.no_x11:
+            conf.check_pkg('gtk+-x11-2.0',
+                           uselib_store='GTK2_X11',
+                           system=True,
+                           mandatory=False)
 
         if not conf.options.no_cocoa:
             conf.check_pkg('gtk+-quartz-2.0',
@@ -128,27 +131,24 @@ def configure(conf):
                        system=True,
                        mandatory=False)
 
-        conf.check_pkg('gtk+-x11-3.0 >= 3.14.0',
-                       uselib_store='GTK3_X11',
-                       system=True,
-                       mandatory=False)
-
-    if not conf.options.no_qt:
-        if not conf.options.no_qt4:
-            conf.check_pkg('QtGui >= 4.4.0',
-                           uselib_store='QT4',
+        if not conf.options.no_x11:
+            conf.check_pkg('gtk+-x11-3.0 >= 3.14.0',
+                           uselib_store='GTK3_X11',
                            system=True,
                            mandatory=False)
 
+    if not conf.options.no_qt:
         if not conf.options.no_qt5:
             conf.check_pkg('Qt5Widgets >= 5.1.0',
                            uselib_store='QT5',
                            system=True,
                            mandatory=False)
-            conf.check_pkg('Qt5X11Extras >= 5.1.0',
-                           uselib_store='QT5_X11',
-                           system=True,
-                           mandatory=False)
+
+            if not conf.options.no_x11:
+                conf.check_pkg('Qt5X11Extras >= 5.1.0',
+                               uselib_store='QT5_X11',
+                               system=True,
+                               mandatory=False)
 
             if not conf.options.no_cocoa:
                 if conf.check_cxx(header_name = 'QMacCocoaViewContainer',
@@ -164,14 +164,8 @@ def configure(conf):
     conf.define('SUIL_MODULE_DIR',
                 conf.env.LIBDIR + '/suil-' + SUIL_MAJOR_VERSION)
 
-    conf.define('SUIL_DIR_SEP', '/')
-    conf.define('SUIL_GTK2_LIB_NAME', conf.options.gtk2_lib_name);
-    conf.define('SUIL_GTK3_LIB_NAME', conf.options.gtk3_lib_name);
-
-    if conf.env.HAVE_GTK2 and conf.env.HAVE_QT4:
-        enable_module('SUIL_WITH_QT4_IN_GTK2')
-        if conf.env.HAVE_GTK2_X11:
-            enable_module('SUIL_WITH_GTK2_IN_QT4')
+    conf.define('SUIL_GTK2_LIB_NAME', conf.options.gtk2_lib_name)
+    conf.define('SUIL_GTK3_LIB_NAME', conf.options.gtk3_lib_name)
 
     if conf.env.HAVE_GTK2 and conf.env.HAVE_QT5:
         enable_module('SUIL_WITH_GTK2_IN_QT5')
@@ -192,34 +186,19 @@ def configure(conf):
     if conf.env.HAVE_GTK2 and conf.env.DEST_OS == 'win32':
         enable_module('SUIL_WITH_WIN_IN_GTK2')
 
-    if conf.env.HAVE_QT4:
-        enable_module('SUIL_WITH_X11_IN_QT4')
-
     if conf.env.HAVE_QT5 and conf.env.HAVE_QT5_X11:
         enable_module('SUIL_WITH_X11_IN_QT5')
 
     if conf.env.HAVE_X11:
         enable_module('SUIL_WITH_X11')
 
-    module_prefix = ''
-    module_ext    = ''
-    if conf.env.PARDEBUG:
-        module_ext += 'D'
-    if conf.env.DEST_OS == 'win32':
-        module_ext += '.dll'
-    elif conf.env.DEST_OS == 'darwin':
-        module_prefix = 'lib'
-        module_ext += '.dylib'
-    else:
-        module_prefix = 'lib'
-        module_ext += '.so'
-
-    conf.define('SUIL_MODULE_PREFIX', module_prefix)
-    conf.define('SUIL_MODULE_EXT', module_ext)
-
     conf.run_env.append_unique('SUIL_MODULE_DIR', [conf.build_path()])
-    autowaf.set_lib_env(conf, 'suil', SUIL_VERSION)
-    conf.write_config_header('suil_config.h', remove=False)
+
+    # Set up environment for building/using as a subproject
+    autowaf.set_lib_env(conf, 'suil', SUIL_VERSION,
+                        include_path=str(conf.path.find_node('include')))
+
+    conf.define('SUIL_NO_DEFAULT_CONFIG', 1)
 
     autowaf.display_summary(
         conf,
@@ -235,15 +214,12 @@ def configure(conf):
 
     # Print summary message for every potentially supported wrapper
     wrappers = [('cocoa', 'gtk2'),
-                ('gtk2', 'qt4'),
                 ('gtk2', 'qt5'),
-                ('qt4', 'gtk2'),
                 ('qt5', 'gtk2'),
                 ('win', 'gtk2'),
                 ('x11', 'gtk2'),
                 ('x11', 'gtk3'),
                 ('qt5', 'gtk3'),
-                ('x11', 'qt4'),
                 ('x11', 'qt5'),
                 ('cocoa', 'qt5')]
     for w in wrappers:
@@ -251,16 +227,17 @@ def configure(conf):
         autowaf.display_msg(conf, 'Support for %s in %s' % (w[0], w[1]),
                             bool(conf.env[var]))
 
+
 def build(bld):
     # C Headers
     includedir = '${INCLUDEDIR}/suil-%s/suil' % SUIL_MAJOR_VERSION
-    bld.install_files(includedir, bld.path.ant_glob('suil/*.h'))
+    bld.install_files(includedir, bld.path.ant_glob('include/suil/*.h'))
     TaskGen.task_gen.mappings['.mm'] = TaskGen.task_gen.mappings['.cc']
 
     # Pkgconfig file
     autowaf.build_pc(bld, 'SUIL', SUIL_VERSION, SUIL_MAJOR_VERSION, [],
-                     {'SUIL_MAJOR_VERSION' : SUIL_MAJOR_VERSION,
-                      'SUIL_PKG_DEPS' : 'lv2'})
+                     {'SUIL_MAJOR_VERSION': SUIL_MAJOR_VERSION,
+                      'SUIL_PKG_DEPS': 'lv2'})
 
     cflags = []
     lib    = []
@@ -277,206 +254,214 @@ def build(bld):
 
     # Shared Library
     if bld.env.BUILD_SHARED:
-        obj = bld(features        = 'c cshlib',
-                  export_includes = ['.'],
-                  source          = 'src/host.c src/instance.c',
-                  target          = 'suil-%s' % SUIL_MAJOR_VERSION,
-                  includes        = ['.'],
-                  defines         = ['SUIL_SHARED', 'SUIL_INTERNAL'],
-                  name            = 'libsuil',
-                  vnum            = SUIL_VERSION,
-                  install_path    = '${LIBDIR}',
-                  cflags          = cflags,
-                  lib             = lib,
-                  uselib          = 'LV2')
+        bld(features        = 'c cshlib',
+            export_includes = ['include'],
+            source          = 'src/host.c src/instance.c',
+            target          = 'suil-%s' % SUIL_MAJOR_VERSION,
+            includes        = ['.', 'include'],
+            defines         = ['SUIL_INTERNAL'],
+            name            = 'libsuil',
+            vnum            = SUIL_VERSION,
+            install_path    = '${LIBDIR}',
+            cflags          = cflags,
+            lib             = lib,
+            uselib          = 'LV2')
 
     # Static library
     if bld.env.BUILD_STATIC:
-        obj = bld(features        = 'c cstlib',
-                  export_includes = ['.'],
-                  source          = 'src/host.c src/instance.c',
-                  target          = 'suil-%s' % SUIL_MAJOR_VERSION,
-                  includes        = ['.'],
-                  defines         = ['SUIL_INTERNAL'],
-                  name            = 'libsuil_static',
-                  vnum            = SUIL_VERSION,
-                  install_path    = '${LIBDIR}',
-                  cflags          = cflags,
-                  lib             = lib,
-                  uselib          = 'LV2')
-
-    if bld.env.SUIL_WITH_GTK2_IN_QT4:
-        obj = bld(features     = 'cxx cxxshlib',
-                  source       = 'src/gtk2_in_qt4.cpp',
-                  target       = 'suil_gtk2_in_qt4',
-                  includes     = ['.'],
-                  defines      = ['SUIL_SHARED', 'SUIL_INTERNAL'],
-                  install_path = module_dir,
-                  cxxflags     = cflags,
-                  lib          = modlib,
-                  uselib       = 'GTK2 QT4 LV2')
+        bld(features        = 'c cstlib',
+            export_includes = ['include'],
+            source          = 'src/host.c src/instance.c',
+            target          = 'suil-%s' % SUIL_MAJOR_VERSION,
+            includes        = ['.', 'include'],
+            defines         = ['SUIL_STATIC', 'SUIL_INTERNAL'],
+            name            = 'libsuil_static',
+            vnum            = SUIL_VERSION,
+            install_path    = '${LIBDIR}',
+            cflags          = cflags,
+            lib             = lib,
+            uselib          = 'LV2')
 
     if bld.env.SUIL_WITH_GTK2_IN_QT5:
-        obj = bld(features     = 'cxx cxxshlib',
-                  source       = 'src/gtk2_in_qt5.cpp',
-                  target       = 'suil_gtk2_in_qt5',
-                  includes     = ['.'],
-                  defines      = ['SUIL_SHARED', 'SUIL_INTERNAL'],
-                  install_path = module_dir,
-                  cxxflags     = cflags,
-                  lib          = modlib,
-                  uselib       = 'GTK2 QT5 LV2')
-
-    if bld.env.SUIL_WITH_QT4_IN_GTK2:
-        obj = bld(features     = 'cxx cxxshlib',
-                  source       = 'src/qt4_in_gtk2.cpp',
-                  target       = 'suil_qt4_in_gtk2',
-                  includes     = ['.'],
-                  defines      = ['SUIL_SHARED', 'SUIL_INTERNAL'],
-                  install_path = module_dir,
-                  cxxflags     = cflags,
-                  lib          = modlib,
-                  uselib       = 'GTK2 QT4 LV2',
-                  linkflags    = bld.env.NODELETE_FLAGS)
+        bld(features     = 'cxx cxxshlib',
+            source       = 'src/gtk2_in_qt5.cpp',
+            target       = 'suil_gtk2_in_qt5',
+            includes     = ['.', 'include'],
+            defines      = ['SUIL_INTERNAL'],
+            install_path = module_dir,
+            cxxflags     = cflags,
+            lib          = modlib,
+            uselib       = 'GTK2 QT5 LV2')
 
     if bld.env.SUIL_WITH_QT5_IN_GTK2:
-        obj = bld(features     = 'cxx cxxshlib',
-                  source       = 'src/qt5_in_gtk.cpp',
-                  target       = 'suil_qt5_in_gtk2',
-                  includes     = ['.'],
-                  defines      = ['SUIL_SHARED', 'SUIL_INTERNAL'],
-                  install_path = module_dir,
-                  cxxflags     = cflags,
-                  lib          = modlib,
-                  uselib       = 'GTK2 QT5 LV2',
-                  linkflags    = bld.env.NODELETE_FLAGS)
+        bld(features     = 'cxx cxxshlib',
+            source       = 'src/qt5_in_gtk.cpp',
+            target       = 'suil_qt5_in_gtk2',
+            includes     = ['.', 'include'],
+            defines      = ['SUIL_INTERNAL'],
+            install_path = module_dir,
+            cxxflags     = cflags,
+            lib          = modlib,
+            uselib       = 'GTK2 QT5 LV2',
+            linkflags    = bld.env.NODELETE_FLAGS)
 
     if bld.env.SUIL_WITH_X11_IN_GTK2:
-        obj = bld(features     = 'c cshlib',
-                  source       = 'src/x11_in_gtk2.c',
-                  target       = 'suil_x11_in_gtk2',
-                  includes     = ['.'],
-                  defines      = ['SUIL_SHARED', 'SUIL_INTERNAL'],
-                  install_path = module_dir,
-                  cflags       = cflags,
-                  lib          = modlib + ['X11'],
-                  uselib       = 'GTK2 GTK2_X11 LV2',
-                  linkflags    = bld.env.NODELETE_FLAGS)
+        bld(features     = 'c cshlib',
+            source       = 'src/x11_in_gtk2.c',
+            target       = 'suil_x11_in_gtk2',
+            includes     = ['.', 'include'],
+            defines      = ['SUIL_INTERNAL'],
+            install_path = module_dir,
+            cflags       = cflags,
+            lib          = modlib + ['X11'],
+            uselib       = 'GTK2 GTK2_X11 LV2',
+            linkflags    = bld.env.NODELETE_FLAGS)
 
     if bld.env.SUIL_WITH_X11_IN_GTK3:
-        obj = bld(features     = 'c cshlib',
-                  source       = 'src/x11_in_gtk3.c',
-                  target       = 'suil_x11_in_gtk3',
-                  includes     = ['.'],
-                  defines      = ['SUIL_SHARED', 'SUIL_INTERNAL'],
-                  install_path = module_dir,
-                  cflags       = cflags,
-                  lib          = modlib + ['X11'],
-                  uselib       = 'GTK3 GTK3_X11 LV2',
-                  linkflags    = bld.env.NODELETE_FLAGS)
+        bld(features     = 'c cshlib',
+            source       = 'src/x11_in_gtk3.c',
+            target       = 'suil_x11_in_gtk3',
+            includes     = ['.', 'include'],
+            defines      = ['SUIL_INTERNAL'],
+            install_path = module_dir,
+            cflags       = cflags,
+            lib          = modlib + ['X11'],
+            uselib       = 'GTK3 GTK3_X11 LV2',
+            linkflags    = bld.env.NODELETE_FLAGS)
 
     if bld.env.SUIL_WITH_QT5_IN_GTK3:
-        obj = bld(features     = 'cxx cxxshlib',
-                  source       = 'src/qt5_in_gtk.cpp',
-                  target       = 'suil_qt5_in_gtk3',
-                  includes     = ['.'],
-                  defines      = ['SUIL_SHARED', 'SUIL_INTERNAL'],
-                  install_path = module_dir,
-                  cflags       = cflags,
-                  lib          = modlib,
-                  uselib       = 'GTK3 QT5 LV2',
-                  linkflags    = bld.env.NODELETE_FLAGS)
+        bld(features     = 'cxx cxxshlib',
+            source       = 'src/qt5_in_gtk.cpp',
+            target       = 'suil_qt5_in_gtk3',
+            includes     = ['.', 'include'],
+            defines      = ['SUIL_INTERNAL'],
+            install_path = module_dir,
+            cflags       = cflags,
+            lib          = modlib,
+            uselib       = 'GTK3 QT5 LV2',
+            linkflags    = bld.env.NODELETE_FLAGS)
 
     if bld.env.SUIL_WITH_COCOA_IN_GTK2:
-        obj = bld(features     = 'cxx cshlib',
-                  source       = 'src/cocoa_in_gtk2.mm',
-                  target       = 'suil_cocoa_in_gtk2',
-                  includes     = ['.'],
-                  defines      = ['SUIL_SHARED', 'SUIL_INTERNAL'],
-                  install_path = module_dir,
-                  cflags       = cflags,
-                  lib          = modlib,
-                  uselib       = 'GTK2 LV2',
-                  linkflags    = ['-framework', 'Cocoa'])
+        bld(features     = 'cxx cshlib',
+            source       = 'src/cocoa_in_gtk2.mm',
+            target       = 'suil_cocoa_in_gtk2',
+            includes     = ['.', 'include'],
+            defines      = ['SUIL_INTERNAL'],
+            install_path = module_dir,
+            cflags       = cflags,
+            lib          = modlib,
+            uselib       = 'GTK2 LV2',
+            linkflags    = ['-framework', 'Cocoa'])
 
     if bld.env.SUIL_WITH_WIN_IN_GTK2:
-        obj = bld(features     = 'cxx cxxshlib',
-                  source       = 'src/win_in_gtk2.cpp',
-                  target       = 'suil_win_in_gtk2',
-                  includes     = ['.'],
-                  defines      = ['SUIL_SHARED', 'SUIL_INTERNAL'],
-                  install_path = module_dir,
-                  cflags       = cflags,
-                  lib          = modlib,
-                  uselib       = 'GTK2 LV2',
-                  linkflags    = bld.env.NODELETE_FLAGS)
-
-    if bld.env.SUIL_WITH_X11_IN_QT4:
-        obj = bld(features     = 'cxx cxxshlib',
-                  source       = 'src/x11_in_qt4.cpp',
-                  target       = 'suil_x11_in_qt4',
-                  includes     = ['.'],
-                  defines      = ['SUIL_SHARED', 'SUIL_INTERNAL'],
-                  install_path = module_dir,
-                  cflags       = cflags,
-                  lib          = modlib,
-                  uselib       = 'QT4 LV2')
+        bld(features     = 'cxx cxxshlib',
+            source       = 'src/win_in_gtk2.cpp',
+            target       = 'suil_win_in_gtk2',
+            includes     = ['.', 'include'],
+            defines      = ['SUIL_INTERNAL'],
+            install_path = module_dir,
+            cflags       = cflags,
+            lib          = modlib,
+            uselib       = 'GTK2 LV2',
+            linkflags    = bld.env.NODELETE_FLAGS)
 
     if bld.env.SUIL_WITH_X11_IN_QT5:
-        obj = bld(features     = 'cxx cxxshlib',
-                  source       = 'src/x11_in_qt5.cpp',
-                  target       = 'suil_x11_in_qt5',
-                  includes     = ['.'],
-                  defines      = ['SUIL_SHARED', 'SUIL_INTERNAL'],
-                  install_path = module_dir,
-                  cflags       = cflags,
-                  lib          = modlib,
-                  uselib       = 'QT5 QT5_X11 LV2 X11')
+        bld(features     = 'cxx cxxshlib',
+            source       = 'src/x11_in_qt5.cpp',
+            target       = 'suil_x11_in_qt5',
+            includes     = ['.', 'include'],
+            defines      = ['SUIL_INTERNAL'],
+            install_path = module_dir,
+            cflags       = cflags,
+            lib          = modlib,
+            uselib       = 'QT5 QT5_X11 LV2 X11')
 
     if bld.env.SUIL_WITH_COCOA_IN_QT5:
-        obj = bld(features     = 'cxx cxxshlib',
-                  source       = 'src/cocoa_in_qt5.mm',
-                  target       = 'suil_cocoa_in_qt5',
-                  includes     = ['.'],
-                  defines      = ['SUIL_SHARED', 'SUIL_INTERNAL'],
-                  install_path = module_dir,
-                  cflags       = cflags,
-                  lib          = modlib,
-                  uselib       = 'QT5 QT5_COCOA LV2',
-                  linkflags    = ['-framework', 'Cocoa'])
+        bld(features     = 'cxx cxxshlib',
+            source       = 'src/cocoa_in_qt5.mm',
+            target       = 'suil_cocoa_in_qt5',
+            includes     = ['.', 'include'],
+            defines      = ['SUIL_INTERNAL'],
+            install_path = module_dir,
+            cflags       = cflags,
+            lib          = modlib,
+            uselib       = 'QT5 QT5_COCOA LV2',
+            linkflags    = ['-framework', 'Cocoa'])
 
     if bld.env.SUIL_WITH_X11:
-        obj = bld(features     = 'c cshlib',
-                  source       = 'src/x11.c',
-                  target       = 'suil_x11',
-                  includes     = ['.'],
-                  defines      = ['SUIL_SHARED', 'SUIL_INTERNAL'],
-                  install_path = module_dir,
-                  cflags       = cflags,
-                  lib          = modlib,
-                  uselib       = 'X11 LV2')
+        bld(features     = 'c cshlib',
+            source       = 'src/x11.c',
+            target       = 'suil_x11',
+            includes     = ['.', 'include'],
+            defines      = ['SUIL_INTERNAL'],
+            install_path = module_dir,
+            cflags       = cflags,
+            lib          = modlib,
+            uselib       = 'X11 LV2')
 
     # Documentation
-    autowaf.build_dox(bld, 'SUIL', SUIL_VERSION, top, out)
+    if bld.env.DOCS:
+        bld.recurse('doc/c')
 
     bld.add_post_fun(autowaf.run_ldconfig)
 
+
+class LintContext(Build.BuildContext):
+    fun = cmd = 'lint'
+
+
 def lint(ctx):
     "checks code for style issues"
+    import glob
+    import os
     import subprocess
-    cmd = ("clang-tidy -p=. -header-filter=suil/ -checks=\"*," +
-           "-clang-analyzer-alpha.*," +
-           "-cppcoreguidelines-*," +
-           "-google-readability-todo," +
-           "-llvm-header-guard," +
-           "-llvm-include-order," +
-           "-misc-unused-parameters," +
-           "-misc-unused-parameters," +
-           "-modernize-*," +
-           "-readability-else-after-return," +
-           "-readability-implicit-bool-cast\" " +
-           "$(find .. -name '*.c' -or -name '*.cpp' -or -name '*.mm')")
-    subprocess.call(cmd, cwd='build', shell=True)
+    import sys
+
+    st = 0
+
+    if "FLAKE8" in ctx.env:
+        Logs.info("Running flake8")
+        st = subprocess.call([ctx.env.FLAKE8[0],
+                              "wscript",
+                              "--ignore",
+                              "E101,E129,W191,E221,W504,E251,E241,E741"])
+    else:
+        Logs.warn("Not running flake8")
+
+    if "IWYU_TOOL" in ctx.env:
+        Logs.info("Running include-what-you-use")
+
+        qt_mapping_file = "/usr/share/include-what-you-use/qt5_11.imp"
+        extra_args = []
+        if os.path.exists(qt_mapping_file):
+            extra_args += ["--", "-Xiwyu", "--mapping_file=" + qt_mapping_file]
+
+        cmd = [ctx.env.IWYU_TOOL[0], "-o", "clang", "-p", "build"] + extra_args
+        output = subprocess.check_output(cmd).decode('utf-8')
+        if 'error: ' in output:
+            sys.stdout.write(output)
+            st += 1
+    else:
+        Logs.warn("Not running include-what-you-use")
+
+    if "CLANG_TIDY" in ctx.env and "clang" in ctx.env.CC[0]:
+        Logs.info("Running clang-tidy")
+        sources = glob.glob('src/*.c') + glob.glob('tests/*.c')
+        sources = list(map(os.path.abspath, sources))
+        procs = []
+        for source in sources:
+            cmd = [ctx.env.CLANG_TIDY[0], "--quiet", "-p=.", source]
+            procs += [subprocess.Popen(cmd, cwd="build")]
+
+        for proc in procs:
+            stdout, stderr = proc.communicate()
+            st += proc.returncode
+    else:
+        Logs.warn("Not running clang-tidy")
+
+    if st != 0:
+        sys.exit(st)
+
 
 def dist(ctx):
     ctx.base_path = ctx.path

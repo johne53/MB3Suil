@@ -1,5 +1,5 @@
 /*
-  Copyright 2007-2017 David Robillard <http://drobilla.net>
+  Copyright 2007-2017 David Robillard <d@drobilla.net>
 
   Permission to use, copy, modify, and/or distribute this software for any
   purpose with or without fee is hereby granted, provided that the above
@@ -17,34 +17,28 @@
 #ifndef SUIL_INTERNAL_H
 #define SUIL_INTERNAL_H
 
-#include <assert.h>
+#include "dylib.h"
+#include "suil_config.h"
+
+#include "lv2/core/lv2.h"
+#include "lv2/ui/ui.h"
+#include "suil/suil.h"
+
+#ifndef _WIN32
+#  include <dlfcn.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _MSC_VER
-#include "./suil_config.h" /* Added by JE - 27-03-2017 (for 'SUIL_MODULE_DIR') */
-#endif
-
-#ifdef _WIN32
-#include <windows.h>
-#define dlopen(path, flags) LoadLibrary(path)
-#define dlclose(lib) FreeLibrary((HMODULE)lib)
-#define inline __inline
-#define snprintf _snprintf
-static inline const char* dlerror(void) { return "Unknown error"; }
-#else
-#include <dlfcn.h>
-#endif
-
-// !!!! Reverted by JE - 29/04/2019
-#include "lv2/lv2plug.in/ns/extensions/ui/ui.h"
-
-#include "suil/suil.h"
-#include "./suil_config.h"
-
 #ifdef __cplusplus
 extern "C" {
+#  if defined(__GNUC__)
+#    pragma GCC diagnostic push
+#    pragma GCC diagnostic ignored "-Wold-style-cast"
+#    pragma GCC diagnostic ignored "-Wzero-as-null-pointer-constant"
+#  endif
 #endif
 
 #define SUIL_ERRORF(fmt, ...) fprintf(stderr, "suil error: " fmt, __VA_ARGS__)
@@ -60,14 +54,14 @@ struct SuilHostImpl {
 	char**                  argv;
 };
 
-struct _SuilWrapper;
+struct SuilWrapperImpl;
 
-typedef void (*SuilWrapperFreeFunc)(struct _SuilWrapper*);
+typedef void (*SuilWrapperFreeFunc)(struct SuilWrapperImpl*);
 
-typedef int (*SuilWrapperWrapFunc)(struct _SuilWrapper* wrapper,
+typedef int (*SuilWrapperWrapFunc)(struct SuilWrapperImpl* wrapper,
                                    SuilInstance*        instance);
 
-typedef struct _SuilWrapper {
+typedef struct SuilWrapperImpl {
 	SuilWrapperWrapFunc wrap;
 	SuilWrapperFreeFunc free;
 	void*               lib;
@@ -121,20 +115,24 @@ suil_open_module(const char* module_name)
 {
 	const char* const env_dir  = getenv("SUIL_MODULE_DIR");
 	const char* const mod_dir  = env_dir ? env_dir : SUIL_MODULE_DIR;
-	const size_t      path_len = strlen(mod_dir)
-		+ strlen(SUIL_DIR_SEP SUIL_MODULE_PREFIX SUIL_MODULE_EXT)
-		+ strlen(module_name)
-		+ 2;
+  const size_t      path_len =
+    strlen(mod_dir) + strlen(SUIL_DIR_SEP SUIL_MODULE_PREFIX SUIL_MODULE_EXT) +
+    strlen(module_name) + 2;
 
 	char* const path = (char*)calloc(path_len, 1);
-	snprintf(path, path_len, "%s%s%s%s%s",
-	         mod_dir, SUIL_DIR_SEP,
-	         SUIL_MODULE_PREFIX, module_name, SUIL_MODULE_EXT);
+  snprintf(path,
+           path_len,
+           "%s%s%s%s%s",
+           mod_dir,
+           SUIL_DIR_SEP,
+           SUIL_MODULE_PREFIX,
+           module_name,
+           SUIL_MODULE_EXT);
 
-	dlerror();
-	void* lib = dlopen(path, RTLD_NOW);
+  dylib_error();
+  void* lib = dylib_open(path, DYLIB_NOW);
 	if (!lib) {
-		SUIL_ERRORF("Failed to open module %s (%s)\n", path, dlerror());
+    SUIL_ERRORF("Failed to open module %s (%s)\n", path, dylib_error());
 	}
 
 	free(path);
@@ -170,8 +168,8 @@ suil_add_feature(LV2_Feature*** features,
 		}
 	}
 
-	*features = (LV2_Feature**)realloc(*features,
-	                                   sizeof(LV2_Feature*) * (*n + 2));
+  *features =
+    (LV2_Feature**)realloc(*features, sizeof(LV2_Feature*) * (*n + 2));
 
 	(*features)[*n]       = (LV2_Feature*)malloc(sizeof(LV2_Feature));
 	(*features)[*n]->URI  = uri;

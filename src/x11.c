@@ -1,5 +1,5 @@
 /*
-  Copyright 2017 David Robillard <http://drobilla.net>
+  Copyright 2017 David Robillard <d@drobilla.net>
   Copyright 2017 Stefan Westerfeld <stefan@space.twc.de>
 
   Permission to use, copy, modify, and/or distribute this software for any
@@ -15,14 +15,16 @@
   OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
-#include <X11/Xlib.h>
+#include "suil_internal.h"
 
-#include "./suil_internal.h"
+#include "suil/suil.h"
+
+#include <X11/Xlib.h>
 
 SUIL_LIB_EXPORT
 void
 suil_host_init(void)
 {
-	// This must be called first for Qt5 in Gtk2 to function correctly
-	XInitThreads();
+  // This must be called first for Qt5 in Gtk2 to function correctly
+  XInitThreads();
 }
