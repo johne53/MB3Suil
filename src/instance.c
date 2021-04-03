@@ -21,7 +21,9 @@
 #include "lv2/ui/ui.h"
 #include "suil/suil.h"
 
+#if (!defined (_MSC_VER) || (_MSC_VER >= 1900)) // Test added by JE - 2-04-2021
 #include <stdbool.h>
+#endif
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

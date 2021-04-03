@@ -43,7 +43,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/FI$(TargetSxsFolder)\targetsxs.h"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..;&quot;$(GenericIncludeFolder)\atk-2.0&quot;;&quot;$(GenericIncludeFolder)\cairo&quot;;&quot;$(GenericIncludeFolder)\pango-1.0&quot;;&quot;$(GenericLibraryFolder)\glib-2.0\include&quot;;&quot;$(GenericIncludeFolder)\gtk-2.0&quot;;&quot;$(GenericIncludeFolder)\gtk-2.0\gdk&quot;;..;..\..\..\..\include"
+				AdditionalIncludeDirectories="..\..;&quot;..\..\..\..\include\lv2\je-manual-copies&quot;;&quot;$(GenericIncludeFolder)\atk-2.0&quot;;&quot;$(GenericIncludeFolder)\cairo&quot;;&quot;$(GenericIncludeFolder)\pango-1.0&quot;;&quot;$(GenericLibraryFolder)\glib-2.0\include&quot;;&quot;$(GenericIncludeFolder)\gtk-2.0&quot;;&quot;$(GenericIncludeFolder)\gtk-2.0\gdk&quot;;..;..\..\include;..\..\..\..\include"
 				PreprocessorDefinitions="_WIN32;WIN32;DEBUG;_DEBUG;snprintf=_snprintf;SUIL_INTERNAL;SUIL_SHARED;SUIL_MAJOR_VERSION=\&quot;0\&quot;;SUIL_MODULE_EXT=\&quot;-32D.dll\&quot;;SUIL_WITH_WIN_IN_GTK2=1"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -130,7 +130,7 @@
 				AdditionalOptions="/FI$(TargetSxsFolder)\targetsxs.h"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\..;&quot;$(GenericIncludeFolder)\atk-2.0&quot;;&quot;$(GenericIncludeFolder)\cairo&quot;;&quot;$(GenericIncludeFolder)\pango-1.0&quot;;&quot;$(GenericLibraryFolder)\glib-2.0\include&quot;;&quot;$(GenericIncludeFolder)\gtk-2.0&quot;;&quot;$(GenericIncludeFolder)\gtk-2.0\gdk&quot;;..;..\..\..\..\include"
+				AdditionalIncludeDirectories="..\..;&quot;..\..\..\..\include\lv2\je-manual-copies&quot;;&quot;$(GenericIncludeFolder)\atk-2.0&quot;;&quot;$(GenericIncludeFolder)\cairo&quot;;&quot;$(GenericIncludeFolder)\pango-1.0&quot;;&quot;$(GenericLibraryFolder)\glib-2.0\include&quot;;&quot;$(GenericIncludeFolder)\gtk-2.0&quot;;&quot;$(GenericIncludeFolder)\gtk-2.0\gdk&quot;;..;..\..\include;..\..\..\..\include"
 				PreprocessorDefinitions="_SECURE_SCL=0;NDEBUG;WIN32;_WIN32;snprintf=_snprintf;SUIL_INTERNAL;SUIL_SHARED;SUIL_MAJOR_VERSION=\&quot;0\&quot;;SUIL_MODULE_EXT=\&quot;-32.dll\&quot;;SUIL_WITH_WIN_IN_GTK2=1"
 				StringPooling="false"
 				RuntimeLibrary="2"
@@ -215,7 +215,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/FI$(TargetSxsFolder)\targetsxs.h"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..;&quot;$(GenericIncludeFolder)\atk-2.0&quot;;&quot;$(GenericIncludeFolder)\cairo&quot;;&quot;$(GenericIncludeFolder)\pango-1.0&quot;;&quot;$(GenericLibraryFolder)\glib-2.0\include&quot;;&quot;$(GenericIncludeFolder)\gtk-2.0&quot;;&quot;$(GenericIncludeFolder)\gtk-2.0\gdk&quot;;..;..\..\..\..\include"
+				AdditionalIncludeDirectories="..\..;&quot;..\..\..\..\include\lv2\je-manual-copies&quot;;&quot;$(GenericIncludeFolder)\atk-2.0&quot;;&quot;$(GenericIncludeFolder)\cairo&quot;;&quot;$(GenericIncludeFolder)\pango-1.0&quot;;&quot;$(GenericLibraryFolder)\glib-2.0\include&quot;;&quot;$(GenericIncludeFolder)\gtk-2.0&quot;;&quot;$(GenericIncludeFolder)\gtk-2.0\gdk&quot;;..;..\..\include;..\..\..\..\include"
 				PreprocessorDefinitions="_SECURE_SCL=0;NDEBUG;WIN32;_WIN32;snprintf=_snprintf;SUIL_INTERNAL;SUIL_SHARED;SUIL_MAJOR_VERSION=\&quot;0\&quot;;SUIL_MODULE_EXT=\&quot;-32RDC.dll\&quot;;SUIL_WITH_WIN_IN_GTK2=1"
 				StringPooling="false"
 				RuntimeLibrary="2"
@@ -269,7 +269,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="mkdir &quot;$(GenericLibraryFolder)\pkgconfig&quot; 2&gt; NUL&#x0D;&#x0A;mkdir &quot;$(GenericIncludeFolder)\suil-0\suil&quot; 2&gt; NUL&#x0D;&#x0A;copy /Y &quot;..\..\suil\*.h&quot; &quot;$(GenericIncludeFolder)\suil-0\suil\&quot;&#x0D;&#x0A;copy /Y &quot;$(OutDir)\$(TargetName).dll&quot; &quot;$(Release32TestSuiteFolder)\..\lib\$(LibardourFolder)\suil\$(TargetName).dll&quot;&#x0D;&#x0A;copy /Y &quot;$(OutDir)\$(TargetName).lib&quot; &quot;$(GenericWin32LibraryFolder)\$(TargetName).lib&quot;&#x0D;&#x0A;copy /Y &quot;..\..\suil.pc&quot; &quot;$(GenericLibraryFolder)\pkgconfig&quot;&#x0D;&#x0A;"
+				CommandLine="mkdir &quot;$(GenericLibraryFolder)\pkgconfig&quot; 2&gt; NUL&#x0D;&#x0A;mkdir &quot;$(GenericIncludeFolder)\suil-0\suil&quot; 2&gt; NUL&#x0D;&#x0A;copy /Y &quot;..\..\include\suil\*.h&quot; &quot;$(GenericIncludeFolder)\suil-0\suil\&quot;&#x0D;&#x0A;copy /Y &quot;$(OutDir)\$(TargetName).dll&quot; &quot;$(Release32TestSuiteFolder)\..\lib\$(LibardourFolder)\suil\$(TargetName).dll&quot;&#x0D;&#x0A;copy /Y &quot;$(OutDir)\$(TargetName).lib&quot; &quot;$(GenericWin32LibraryFolder)\$(TargetName).lib&quot;&#x0D;&#x0A;copy /Y &quot;..\..\suil.pc&quot; &quot;$(GenericLibraryFolder)\pkgconfig&quot;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 	</Configurations>

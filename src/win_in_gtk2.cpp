@@ -20,6 +20,10 @@
 #include "lv2/options/options.h"
 #include "lv2/urid/urid.h"
 
+#if (defined (_MSC_VER) && (_MSC_VER < 1900)) // Test added by JE - 2-04-2021
+#define nullptr NULL
+#endif
+
 SUIL_DISABLE_GTK_WARNINGS
 #include <gdk/gdkwin32.h>
 #include <gtk/gtk.h>
@@ -40,8 +44,13 @@ extern "C" {
 #define SUIL_WIN_WRAPPER(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SUIL_TYPE_WIN_WRAPPER, SuilWinWrapper))
 
+#if (defined (_MSC_VER) && (_MSC_VER < 1900)) // Test added by JE - 2-04-2021
+typedef struct _SuilWinWrapper       SuilWinWrapper;
+typedef struct _SuilWinWrapperClass  SuilWinWrapperClass;
+#else
 using SuilWinWrapper      = _SuilWinWrapper;
 using SuilWinWrapperClass = _SuilWinWrapperClass;
+#endif
 
 struct _SuilWinWrapper {
 	GtkDrawingArea              area;
