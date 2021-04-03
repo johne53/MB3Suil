@@ -4,12 +4,12 @@
 require "../local-paths.lib";
 
 $package_string = "\"suil 0.10\"";
-$version_string = "\"0.10.6\"";
-$suil_version = "0.10.6";
+$version_string = "\"0.10.11\"";
+$suil_version = "0.10.11";
 $major = 0;
 $minor = 10;
-$micro = 6;
-$binary_age = 106;
+$micro = 11;
+$binary_age = 1011;
 $interface_age = 0;
 $current_minus_age = 0;
 $gettext_package = "suil";
@@ -70,7 +70,6 @@ if (-1 != index($command, "-X64")) {
 }
 
 process_file ("suil.pc");
-process_file ("build/suil_config.h");
 
 if ($command eq -buildall) {
 	process_file ("build/msvc/suil.rc");
