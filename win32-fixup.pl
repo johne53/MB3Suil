@@ -9,7 +9,7 @@ $suil_version = "0.10.2";
 $major = 0;
 $minor = 10;
 $micro = 2;
-$binary_age = 102;
+$binary_age = 1002;
 $interface_age = 0;
 $current_minus_age = 0;
 $gettext_package = "suil";
@@ -51,7 +51,14 @@ sub process_file
 	    s/\@Release32TestSuiteFolder@/$release32_testsuite_folder/g;
 	    s/\@Debug32TargetFolder@/$debug32_target_folder/g;
 	    s/\@Release32TargetFolder@/$release32_target_folder/g;
+	    s/\@GenericWin64LibraryFolder@/$generic_win64_library_folder/g;
+	    s/\@GenericWin64BinaryFolder@/$generic_win64_binary_folder/g;
+	    s/\@Debug64TestSuiteFolder@/$debug64_testsuite_folder/g;
+	    s/\@Release64TestSuiteFolder@/$release64_testsuite_folder/g;
+	    s/\@Debug64TargetFolder@/$debug64_target_folder/g;
+	    s/\@Release64TargetFolder@/$release64_target_folder/g;
 	    s/\@TargetSxSFolder@/$target_sxs_folder/g;
+	    s/\@LibraryExt@/$library_ext/g;
 	    s/\@PREFIX@/$prefix/g;
 	    s/\@EXEC_PREFIX@/$exec_prefix/g;
 	    s/\@INCLUDEDIR@/$generic_include_folder/g;
@@ -63,6 +70,12 @@ sub process_file
 
 my $command=join(' ',@ARGV);
 
+if (-1 != index($command, "-linux")) {
+	$library_ext = ".a";
+} else {
+	$library_ext = ".lib";
+}
+
 if (-1 != index($command, "-X64")) {
 	$suil_api_version = "64-0";
 } else {
@@ -70,9 +83,10 @@ if (-1 != index($command, "-X64")) {
 }
 
 process_file ("suil.pc");
-process_file ("build/suil_config.h");
 
-if ($command eq -buildall) {
+if (-1 != index($command, "-buildall")) {
+	process_file ("build/suil_config.h");
 	process_file ("build/msvc/suil.rc");
 	process_file ("build/msvc/suil.vsprops");
+	process_file ("build/msvc/suil.props");
 }
